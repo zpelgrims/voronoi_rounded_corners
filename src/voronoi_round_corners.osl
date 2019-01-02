@@ -1,0 +1,93 @@
+// 3d voronoi noise with rounded corners
+// taking inspiration from:
+
+
+float smin2(float a, float b, float r)
+{
+    float f = max(0., 1. - abs(b - a)/r);
+    return min(a, b) - r*.25*f*f;
+}
+
+
+vector hash(vector x)
+{
+    vector a = vector( dot(x,vector(127.1, 311.7, 74.7)),
+                       dot(x,vector(269.5, 183.3, 246.1)),
+                       dot(x,vector(113.5, 271.9, 124.6)) );
+    
+    vector result = sin(a) * 43758.5453123;
+    return result - floor(result);
+}
+
+
+float voronoi_smoothed(vector x, float smoothing){
+    vector p = floor(x);
+    vector f = x - floor(x);
+    vector h = step(0.5, f) - 2.0;
+    p += h; f -= h;
+
+    vector minCellID = vector(0);
+    vector mo;
+    float md = 8.0, lMd = 8.0, lnDist, d;
+    
+    for( int k=0; k<=3; k++ )
+    for( int j=0; j<=3; j++ )
+    for( int i=0; i<=3; i++ )
+    {
+        vector b = vector(float(i), float(j), float(k));
+        vector r = vector( b ) - f + hash( p + b );
+        
+        d = dot(r, r);
+        if( d<md ){  
+            md = d;
+            mo = r; 
+            //cellID = h + p; // For cell coloring.
+            // zeno: how should mincellid be used??
+            minCellID = b; // Record the minimum distance cell ID.
+        }
+    }
+    
+    for( int k=0; k<=3; k++ )
+    for( int j=0; j<=3; j++ )
+    for( int i=0; i<=3; i++ )
+    {
+        vector b = vector(float(i), float(j), float(k));
+        vector r = vector( b ) - f + hash( p + b ) - mo;
+        
+        if(dot(r, r)>.00001) {
+            lnDist = dot(mo + r*.5, normalize(r));
+            lMd = smin2(lMd, lnDist, (lnDist*.5 + .5)*smoothing);
+        }
+    }
+
+    return max(lMd, 0.0);    
+}
+
+
+float remap(vector p, float smoothing, float ew){    
+    float c = voronoi_smoothed(p, smoothing);
+    
+    if(c < ew){ 
+        c = abs(c - ew)/ew; // Normalize the domain to a range of zero to one.
+        c = smoothstep(0.03, 0.1, c);
+    }
+    else { // Over the threshold? Use the regular Voronoi cell value.
+        c = (c - ew)/(1. - ew); // Normalize the domain to a range of zero to one.
+        c = smoothstep(1.0, 1.0, c);
+    }
+    
+    return c;
+}
+
+
+shader voronoi_smooth(
+    point pos = P,
+    vector scale = vector(1.0),
+
+    float border_thickness = 0.025,
+    float smoothing = 0.35,
+
+    output color Color = color(0.0) )
+{
+    Color = color(remap(pos * scale, smoothing, border_thickness));
+}
