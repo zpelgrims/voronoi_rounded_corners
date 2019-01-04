@@ -2,6 +2,11 @@
 // taking inspiration from:
 
 
+// todo:
+// nice looking variable cell sizes
+// probs need to get rid of hashing, look at other implementations
+
+
 float smin2(float a, float b, float r)
 {
     float f = max(0., 1. - abs(b - a)/r);
@@ -20,7 +25,7 @@ vector hash(vector x)
 }
 
 
-float voronoi_smoothed(vector x, float smoothing){
+float voronoi_smoothed(vector x, float smoothing, float density){
     vector p = floor(x);
     vector f = x - floor(x);
     vector h = step(0.5, f) - 2.0;
@@ -30,6 +35,8 @@ float voronoi_smoothed(vector x, float smoothing){
     vector mo;
     float md = 8.0, lMd = 8.0, lnDist, d;
     
+    vector hashed = vector(0);
+
     for( int k=0; k<=3; k++ )
     for( int j=0; j<=3; j++ )
     for( int i=0; i<=3; i++ )
@@ -38,11 +45,11 @@ float voronoi_smoothed(vector x, float smoothing){
         vector r = vector( b ) - f + hash( p + b );
         
         d = dot(r, r);
-        if( d<md ){  
+        if( d<md ){
             md = d;
             mo = r; 
-            //cellID = h + p; // For cell coloring.
-            // zeno: how should mincellid be used??
+            
+            hashed = hash(p + b);
             minCellID = b; // Record the minimum distance cell ID.
         }
     }
@@ -60,12 +67,14 @@ float voronoi_smoothed(vector x, float smoothing){
         }
     }
 
+    if (hashed[0] > density) return 0.0;
+
     return max(lMd, 0.0);    
 }
 
 
-float remap(vector p, float smoothing, float ew){    
-    float c = voronoi_smoothed(p, smoothing);
+float remap(vector p, float smoothing, float ew, float density){    
+    float c = voronoi_smoothed(p, smoothing, density);
     
     if(c < ew){ 
         c = abs(c - ew)/ew; // Normalize the domain to a range of zero to one.
@@ -86,8 +95,9 @@ shader voronoi_smooth(
 
     float border_thickness = 0.025,
     float smoothing = 0.35,
+    float density = 0.5,
 
     output color Color = color(0.0) )
 {
-    Color = color(remap(pos * scale, smoothing, border_thickness));
+    Color = color(remap(pos * scale, smoothing, border_thickness, density));
 }
