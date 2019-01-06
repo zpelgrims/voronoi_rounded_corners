@@ -25,7 +25,7 @@ vector hash(vector x)
 }
 
 
-float voronoi_smoothed(vector x, float smoothing, float density){
+float voronoi_smoothed(vector x, float smoothing, float density, float heightvar, float md_in){
     vector p = floor(x);
     vector f = x - floor(x);
     vector h = step(0.5, f) - 2.0;
@@ -33,7 +33,7 @@ float voronoi_smoothed(vector x, float smoothing, float density){
 
     vector minCellID = vector(0);
     vector mo;
-    float md = 8.0, lMd = 8.0, lnDist, d;
+    float md = md_in, lMd = md_in, lnDist, d;
     
     vector hashed = vector(0);
 
@@ -43,6 +43,7 @@ float voronoi_smoothed(vector x, float smoothing, float density){
     {
         vector b = vector(float(i), float(j), float(k));
         vector r = vector( b ) - f + hash( p + b );
+        r[1] += heightvar;
         
         d = dot(r, r);
         if( d<md ){
@@ -60,6 +61,7 @@ float voronoi_smoothed(vector x, float smoothing, float density){
     {
         vector b = vector(float(i), float(j), float(k));
         vector r = vector( b ) - f + hash( p + b ) - mo;
+        r[1] += heightvar;
         
         if(dot(r, r)>.00001) {
             lnDist = dot(mo + r*.5, normalize(r));
@@ -73,8 +75,8 @@ float voronoi_smoothed(vector x, float smoothing, float density){
 }
 
 
-float remap(vector p, float smoothing, float ew, float density){    
-    float c = voronoi_smoothed(p, smoothing, density);
+float remap(vector p, float smoothing, float ew, float density, float heightvar,float md_in){    
+    float c = voronoi_smoothed(p, smoothing, density, heightvar, md_in);
     
     if(c < ew){ 
         c = abs(c - ew)/ew; // Normalize the domain to a range of zero to one.
@@ -96,8 +98,10 @@ shader voronoi_smooth(
     float border_thickness = 0.025,
     float smoothing = 0.35,
     float density = 0.5,
+    float heightvar = 0.0,
+    float md_in = 8.0,
 
     output color Color = color(0.0) )
 {
-    Color = color(remap(pos * scale, smoothing, border_thickness, density));
+    Color = color(remap(pos * scale, smoothing, border_thickness, density, heightvar, md_in));
 }
