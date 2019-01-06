@@ -1,10 +1,15 @@
 // 3d voronoi noise with rounded corners and spatially varying cell sizes
 // author: Zeno Pelgrims
 
+// currently the technique to vary cell sizes works in a somewhat limited fashion
+// high values (e.g > 5.0 seem to break the pattern)
+// it works by pushing up the cell point, which makes the grid "less dense"
+// like this image: https://2.bp.blogspot.com/_ruWNVFNtHoc/TB2XhX5x4EI/AAAAAAAAE-g/4Yqy4N7QaoM/s1600/122745487_16ac055652_o.jpg
+
 // taking inspiration from:
-// https://www.shadertoy.com/view/4sdcDN
-// https://www.shadertoy.com/view/ldl3W8
-// https://www.shadertoy.com/view/MslGD8
+// https://www.shadertoy.com/view/4sdcDN (polynomial smoothed corners)
+// https://www.shadertoy.com/view/ldl3W8 (constant border radius)
+// https://www.shadertoy.com/view/MslGD8 (density)
 
 
 float smin2(float a, float b, float r) {
@@ -97,13 +102,12 @@ shader voronoi_smooth(
     float border_thickness = 0.025,
     float smoothing = 0.35,
     float density = 1.0,
-    float heightvar = 0.0,
-    float md_in = 20.0,
+    float heightvar = 0.0
 
     output color Color = color(0.0)
 )
 {
-    float voronoi = voronoi_smoothed(pos*scale, smoothing, density, heightvar, md_in);
+    float voronoi = voronoi_smoothed(pos*scale, max(0.0, smoothing), density, heightvar, 100.0);
     float remapped = remap(voronoi, border_thickness);
     Color = color(remapped);
 }
